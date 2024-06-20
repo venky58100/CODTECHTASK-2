@@ -1,0 +1,45 @@
+import paho.mqtt.client as mqtt
+import Adafruit_DHT
+import time
+
+# MQTT broker configuration
+broker_address = "your_broker_address"  # Replace with your MQTT broker's address
+broker_port = 1883                      # Default MQTT port
+
+# DHT sensor configuration
+sensor = Adafruit_DHT.DHT11            # Replace with DHT22 or DHT11 depending on your sensor
+pin = 4                                 # GPIO pin connected to the sensor (GPIO4 on Raspberry Pi)
+
+# MQTT topics
+temperature_topic = "weather/temperature"
+humidity_topic = "weather/humidity"
+
+# MQTT client initialization
+client = mqtt.Client()
+
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code " + str(rc))
+
+def publish_sensor_data():
+    humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
+    if humidity is not None and temperature is not None:
+        client.publish(temperature_topic, f"{temperature:.2f}")
+        client.publish(humidity_topic, f"{humidity:.2f}")
+        print(f"Published - Temperature: {temperature:.2f} C, Humidity: {humidity:.2f} %")
+    else:
+        print("Failed to retrieve data from sensor")
+
+# MQTT callbacks
+client.on_connect = on_connect
+
+# Connect to MQTT broker
+client.connect(broker_address, broker_port, 60)
+
+# Loop to publish data
+try:
+    while True:
+        publish_sensor_data()
+        time.sleep(10)  # Adjust interval as needed
+except KeyboardInterrupt:
+    print("Interrupted")
+    client.disconnect()
